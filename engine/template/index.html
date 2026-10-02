@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  Route A starter. Copy this folder to videos/<name>/ and replace the scenes.
+  Contract: window.seek(t) paints the exact frame for time t (seconds).
+  No CSS transitions, no timers, no requestAnimationFrame in render mode,
+  no state carried between frames, no Math.random (use rng(seed)).
+  Open it in a browser (via `npx serve .` from the repo root) for a live preview;
+  render with: node engine/render.mjs --page videos/<name>/index.html
+-->
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @font-face {
+    font-family: "Source Serif 4";
+    font-weight: 700;
+    src: url("../../public/fonts/SourceSerif4-Bold.woff2") format("woff2");
+  }
+  html, body { margin: 0; background: #141413; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script type="module">
+  import { spring, rng, SPRINGS, layout } from "../../lib/motion.js";
+
+  const VIDEO = (window.VIDEO = { width: 1080, height: 1920, duration: 6 });
+  const W = VIDEO.width, H = VIDEO.height, L = layout(W, H);
+  const canvas = document.getElementById("c");
+  canvas.width = W;
+  canvas.height = H;
+  const g = canvas.getContext("2d");
+
+  const INK = "#F0EEE6", ACCENT = "#D97757", BG = "#141413";
+
+  // One object per shot. `draw` receives local time (seconds since the shot started).
+  const SCENES = [
+    {
+      from: 0, to: 3, draw(t) { // kinetic title: rises out of a mask line, no fade
+        const rise = spring(t - 0.1, SPRINGS.heavy.k, SPRINGS.heavy.d);
+        const bar = spring(t - 0.35, SPRINGS.snappy.k, SPRINGS.snappy.d);
+        const size = L.unit * 17;
+        g.save();
+        g.translate(L.cx, L.cy);
+        g.beginPath();
+        g.rect(-W / 2, -size, W, size * 1.1); // mask: everything above the baseline
+        g.clip();
+        g.fillStyle = INK;
+        g.font = `700 ${size}px "Source Serif 4", serif`;
+        g.textAlign = "center";
+        g.fillText("MOTION", 0, (1 - rise) * size * 1.1);
+        g.restore();
+        g.fillStyle = ACCENT;
+        g.fillRect(L.cx - L.unit * 30, L.cy + L.unit * 5, L.unit * 60 * bar, L.unit * 1.6);
+      },
+    },
+    {
+      from: 3, to: 6, draw(t) { // grid of squares on a stagger
+        const r = rng(7);
+        const cols = 6, cell = W / (cols + 1);
+        for (let i = 0; i < 48; i++) {
+          const x = (i % cols) * cell + cell;
+          const y = Math.floor(i / cols) * cell + (H - 8 * cell) / 2 + cell / 2;
+          const s = spring(t - i * 0.03 - r() * 0.1, SPRINGS.snappy.k, SPRINGS.snappy.d);
+          g.fillStyle = i % 7 ? INK : ACCENT;
+          g.fillRect(x - cell * 0.35 * s, y - cell * 0.35 * s, cell * 0.7 * s, cell * 0.7 * s);
+        }
+      },
+    },
+  ];
+
+  function draw(t) {
+    g.fillStyle = BG;
+    g.fillRect(0, 0, W, H);
+    for (const s of SCENES) if (t >= s.from && t < s.to) s.draw(t - s.from);
+  }
+
+  // Canvas text only renders a web font once it is loaded, so load it before seek exists.
+  await document.fonts.load('700 10px "Source Serif 4"');
+  window.seek = async (t) => { draw(t); };
+
+  // Live preview in a normal browser; off during the headless render.
+  if (!window.__RENDER__) {
+    const t0 = performance.now();
+    (function loop() {
+      draw(((performance.now() - t0) / 1000) % VIDEO.duration);
+      requestAnimationFrame(loop);
+    })();
+  }
+</script>
+</body>
+</html>

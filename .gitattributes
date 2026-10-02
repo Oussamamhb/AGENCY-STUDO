@@ -1,0 +1,7 @@
+# Keep LF everywhere: bash scripts break with Windows line endings.
+* text=auto eol=lf
+*.png binary
+*.woff2 binary
+*.wav binary
+*.mp4 binary
+*.webp binary

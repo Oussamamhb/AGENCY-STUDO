@@ -1,0 +1,8 @@
+node_modules/
+out/
+.remotion/
+.venv/
+__pycache__/
+.DS_Store
+.env
+public/*/gen/raw/
